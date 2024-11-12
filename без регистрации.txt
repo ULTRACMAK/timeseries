@@ -1,0 +1,3 @@
+https://chat.hix.ai/ru/claude/claude-3-5-sonnet
+https://gemini-google-ai.ru/
+https://gemini-ai.ru/
