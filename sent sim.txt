@@ -1,0 +1,57 @@
+from sentence_transformers import SentenceTransformer
+import pandas as pd
+import numpy as np
+
+# Initialize model
+model = SentenceTransformer("sergeyzh/LaBSE-ru-turbo")
+
+def get_similarity_matrix(texts):
+    embeddings = model.encode(texts)
+    similarities = np.inner(embeddings, embeddings)
+    return similarities
+
+def analyze_df(df):
+    # a) Match most probable comment to each text
+    text_embeddings = model.encode(df['text'].tolist())
+    comment_embeddings = model.encode(df['comment'].tolist())
+    
+    # Calculate similarities between texts and comments
+    text_comment_similarities = np.inner(text_embeddings, comment_embeddings)
+    
+    # Get most probable comment for each text
+    most_probable_comment_idx = np.argmax(text_comment_similarities, axis=1)
+    df['most_probable_comment'] = df['comment'].iloc[most_probable_comment_idx].values
+    df['comment_probability'] = np.max(text_comment_similarities, axis=1)
+
+    # b) Calculate harmony within communities
+    community_metrics = {}
+    
+    for community_id in df['community_id'].unique():
+        community_df = df[df['community_id'] == community_id]
+        
+        # Get post harmony
+        post_texts = community_df['text'].tolist()
+        post_similarities = get_similarity_matrix(post_texts)
+        post_harmony = np.mean(post_similarities)
+        
+        # Get post-comment harmony
+        post_comment_pairs = list(zip(community_df['text'], community_df['comment']))
+        all_texts = [item for pair in post_comment_pairs for item in pair]
+        combined_similarities = get_similarity_matrix(all_texts)
+        
+        n = len(post_texts)
+        post_comment_harmony = np.mean(combined_similarities[:n, n:])
+        
+        community_metrics[community_id] = {
+            'post_harmony': post_harmony,
+            'post_comment_harmony': post_comment_harmony
+        }
+    
+    # c) Calculate probability of comment matching its post
+    actual_pairs_prob = np.diagonal(text_comment_similarities)
+    df['actual_comment_probability'] = actual_pairs_prob
+    
+    return df, community_metrics
+
+# Example usage:
+# results_df, community_harmony = analyze_df(your_dataframe)
