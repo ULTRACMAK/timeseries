@@ -1,0 +1,54 @@
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import SimpleRNN, Dense
+import pandas as pd
+import numpy as np
+from sklearn.preprocessing import MinMaxScaler
+
+scaler = MinMaxScaler()
+scaled_data = scaler.fit_transform(df)
+X, y = [], []
+seq_len = #подберите нужный вам промежуток времени
+for i in range(seq_len, len(scaled_data)):
+    X.append(scaled_data[i-seq_len:i])
+    y.append(scaled_data[i, df.columns.get_loc('target')])
+    
+X, y = np.array(X), np.array(y)
+train_size = int(len(X) * 0.8)
+X_train, X_test = X[:train_size], X[train_size:]
+y_train, y_test = y[:train_size], y[train_size:]
+
+def create_simple_rnn(input_shape): 
+  model = Sequential() 
+  model.add(SimpleRNN(50, activation='relu', input_shape=input_shape))
+  model.add(Dense(1))
+  #or model = Sequential([SimpleRNN(32, input_shape=input_shape), Dense(1)])
+  model.compile(optimizer='adam', loss='mse', metrics=['mae']) 
+  return model
+
+rnn_model = create_simple_rnn((X_train.shape[1], X_train.shape[2]))
+rnn_history = rnn_model.fit(
+        X_train, y_train,
+        epochs=50,
+        batch_size=64,
+        validation_split=0.1,
+        verbose=1
+    )
+def plot_correlation(y_test, predictions, title):
+    plt.figure(figsize=(10, 6))
+    plt.scatter(y_test, predictions)
+    plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--', lw=2)
+    plt.title(f'{title} - Correlation Plot')
+    plt.xlabel('Actual Values')
+    plt.ylabel('Predicted Values')
+    plt.show()
+def plot_history(history, title):
+    plt.figure(figsize=(10, 6))
+    plt.plot(history.history['loss'], label='Training Loss')
+    plt.plot(history.history['val_loss'], label='Validation Loss')
+    plt.title(f'{title} - Training History')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.legend()
+    plt.show()
+доп. материалы - https://github.com/karan2261/Time-Series-Prediction-Using-RNN-LSTM-and-GRU/blob/main/Time%20Series%20with%20RNN%2C%20LSTM%20and%20GRU.ipynb
